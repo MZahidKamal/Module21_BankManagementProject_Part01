@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from pathlib import Path
 import environ
+import dj_database_url
+from pathlib import Path
 
 env = environ.Env()
 environ.Env.read_env()
@@ -47,7 +48,6 @@ INSTALLED_APPS = [
     'accounts',
     'core',
     'transactions',
-    'learningCBVs_app',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -92,21 +92,27 @@ WSGI_APPLICATION = 'Module21_BankManagementProject_Part01.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 
-# DATABASES = {
+# DATABASES = {                                                                                                         # Default database configuration for DB.SQLite
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
-    }
+# DATABASES = {                                                                                                         # Added database configuration for PostgreSQL
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': env("DB_NAME"),
+#         'USER': env("DB_USER"),
+#         'PASSWORD': env("DB_PASSWORD"),
+#         'HOST': env("DB_HOST"),
+#         'PORT': env("DB_PORT"),
+#     }
+# }
+DATABASES = {                                                                                                           # Added database configuration for PostgreSQL during deployment on Render
+    'default': dj_database_url.config(
+        # Feel free to alter this value to suit your needs.
+        default='postgres://mamar_bank_uzgf_user:uFKjkLQwCSk9XhLqRsjWrAcwzFucUo6V@dpg-cm9eqs0cmk4c739eac9g-a.oregon-postgres.render.com/mamar_bank_uzgf',
+    )
 }
 
 
