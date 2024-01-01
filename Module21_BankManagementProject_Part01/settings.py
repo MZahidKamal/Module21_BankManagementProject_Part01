@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'accounts',
     'core',
     'transactions',
+    'learningCBVs_app',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
