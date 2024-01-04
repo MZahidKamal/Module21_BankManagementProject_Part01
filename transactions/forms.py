@@ -1,5 +1,10 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+
 from .models import Transactions_Model
+from accounts.models import UserBankAccount_Model
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class TransactionsModel_Form(forms.ModelForm):
     class Meta:
@@ -19,6 +24,14 @@ class TransactionsModel_Form(forms.ModelForm):
         self.instance.account = self.account
         self.instance.post_transaction_balance = self.account.balance       # Account balance will be updated.
         return super().save()
+
+
+class TransferTransactionModel_Form(TransactionsModel_Form):
+    class Meta(TransactionsModel_Form.Meta):
+        fields = TransactionsModel_Form.Meta.fields
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -50,6 +63,46 @@ class WithdrawTransaction_Form(TransactionsModel_Form):
             raise forms.ValidationError(f"Maximum withdrawal amount is {max_withdraw_amount}€.")
 
         return amount
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class TransferTransaction_Form(TransferTransactionModel_Form):
+    account_number = forms.IntegerField(required=True, label='Receiver Account Number')
+    # The field for the receiver account number.
+
+    class Meta:
+        model = Transactions_Model
+        fields = TransactionsModel_Form.Meta.fields + ['account_number', 'amount']
+
+    def clean_account_number(self):
+        account_number = self.cleaned_data.get('account_number')
+        try:
+            receiver_account = UserBankAccount_Model.objects.get(account_number=account_number)
+        except UserBankAccount_Model.DoesNotExist:
+            raise forms.ValidationError(f"Account number {account_number} does not exist.")
+        self.cleaned_data['receiver_account'] = receiver_account
+        return account_number
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')                                # amount is getting from the form filled by the user.
+
+        sender_account = self.account
+        min_transfer_amount = 1
+        max_transfer_amount = 20000
+        sender_balance = sender_account.balance
+
+        if amount > sender_balance:
+            raise ValidationError("Insufficient balance.")
+        if amount < min_transfer_amount:
+            raise ValidationError(f"Minimum transfer amount is {min_transfer_amount}€.")
+        if amount > max_transfer_amount:
+            raise ValidationError(f"Maximum transfer amount is {max_transfer_amount}€.")
+        return amount
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'receiver_account' in self.fields:
+            del self.fields['receiver_account']
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

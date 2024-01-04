@@ -12,22 +12,14 @@
 	<div class="w-full block flex-grow lg:flex lg:items-center lg:w-auto px-10">
 		{% if request.user.is_authenticated %}
 			<div class="text-md lg:flex-grow">
-				<a href="{% url 'transaction_report' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">
-					Report
-				</a>
-				<a href="{% url 'deposit' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">
-					Deposit
-				</a>
-				<a href="{% url 'withdraw' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">
-					Withdraw
-				</a>
-				<a href="{% url 'loan_request' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">
-					Loan Request
-				</a>
+				<a href="{% url 'transaction_report' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">Report</a>
+				<a href="{% url 'deposit' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">Deposit</a>
+				<a href="{% url 'withdraw' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">Withdraw</a>
+				<a href="{% url 'transfer' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">Transfer</a>
+				<a href="{% url 'loan_request' %}" class="block mt-4 lg:inline-block lg:mt-0 text-blue-900 hover:text-red-900 hover:font-black mr-4">Loan Request</a>
 			</div>
 			<div class="flex w-auto">
 				<div class="text-blue-900 my-auto font-black px-5">Welcome, {{ request.user.first_name }} {{ request.user.last_name }} (Current balance : {{request.user.user_account.balance}} €) </div>
-
 				<a href="{% url 'update_profile' %}" class="mx-2 inline-block font-medium text-sm px-4 py-2 leading-none bg-blue-900 rounded text-white border-white hover:border-transparent hover:text-dark hover:bg-red-700 mt-4 lg:mt-0">Profile</a>
 				<a href="{% url 'logout' %}" class="mx-2 inline-block font-medium text-sm px-4 py-2 leading-none bg-blue-900 rounded text-white border-white hover:border-transparent hover:text-dark hover:bg-red-700 mt-4 lg:mt-0">Logout</a>
 			</div>
@@ -39,6 +31,7 @@
 			<div>
 				<a href="{% url 'register' %}" class="inline-block font-medium text-sm px-4 py-2 leading-none bg-blue-900 rounded text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white mt-4 lg:mt-0">Register</a>
 			</div>
+
 		{% endif %}
 	</div>
 </nav>

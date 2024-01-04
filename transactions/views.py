@@ -3,17 +3,17 @@ from django.contrib import messages
 from django.db.models import Sum
 from django.urls import reverse_lazy
 from django.views import View
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpResponse
-from django.views.generic import CreateView, ListView, TemplateView
+from django.views.generic import CreateView, ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from django.core.mail.message import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
 from .models import Transactions_Model
-from .forms import DepositTransaction_Form, WithdrawTransaction_Form, LoanRequestTransaction_Form
-from .constants import DEPOSIT, WITHDRAW, LOAN_REQUEST, LOAN_PAID
+from .forms import DepositTransaction_Form, WithdrawTransaction_Form, TransferTransaction_Form, LoanRequestTransaction_Form
+from .constants import DEPOSIT, WITHDRAW, TRANSFER, LOAN_REQUEST, LOAN_PAID
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Create your views here.
@@ -47,6 +47,30 @@ class TransactionCreationMixin_View(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # context['head_title'] = self.page_title
+        context.update({
+            'title': self.title
+        })
+        return context
+
+"""We will be using this view, through inheritance, to create all other views, which is related to transaction."""
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class TransferCreationMixin_View(LoginRequiredMixin, CreateView):
+    template_name = 'transactions/transfer_form.html'
+    model = Transactions_Model
+    title = ''
+    success_url = reverse_lazy('transaction_report')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update({
+            'account': self.request.user.user_account
+        })
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context.update({
             'title': self.title
         })
@@ -114,6 +138,44 @@ class WithdrawTransaction_View(TransactionCreationMixin_View):
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+class TransferTransaction_View(TransferCreationMixin_View):
+    form_class = TransferTransaction_Form
+    title = 'Transfer Money'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['type'] = TRANSFER
+        return initial
+
+    def form_valid(self, form):
+        user = self.request.user
+        user_account = self.request.user.user_account
+
+        # Get the receiver_account directly from cleaned_data
+        receiver_account = form.cleaned_data.get('receiver_account')
+        if receiver_account is not None:
+            receiver_account_number = receiver_account.account_number
+
+        amount = form.cleaned_data['amount']
+
+        user_account.balance -= amount
+        user_account.save(update_fields=['balance'])
+
+        receiver_account.balance += amount
+        receiver_account.save(update_fields=['balance'])
+
+        messages.success(self.request, f'{amount}€ was successfully transferred to the account number {receiver_account_number}!')
+        send_transaction_confirmation_email(user, 'Transfer Transaction Confirmation', amount, 'transactions/transfer_email.html')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        print("Form is invalid!")
+        print(form.errors)
+        return super().form_invalid(form)
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 class LoanRequestTransaction_View(TransactionCreationMixin_View):
     form_class = LoanRequestTransaction_Form
     title = 'Request For Loan'
@@ -136,27 +198,6 @@ class LoanRequestTransaction_View(TransactionCreationMixin_View):
         messages.success(self.request, f'Loan request for {amount}€ was successfully submitted!')
         send_transaction_confirmation_email(user, 'Loan Request Confirmation', amount, 'transactions/loan_request_email.html')
         return super().form_valid(form)
-
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-# class LoanPaidTransaction_View(LoginRequiredMixin, TransactionCreationMixin_View):
-#     form_class = LoanRequestTransaction_Form
-#     title = 'Loan Paid'
-#
-#     def get_initial(self):
-#         initial = super().get_initial()
-#         initial['transaction_type'] = LOAN_PAID
-#         return initial
-#
-#     def form_valid(self, form):
-#         amount = form.cleaned_data['amount']
-#         account = self.request.user.user_account
-#         account.balance -= amount
-#         account.save(
-#             update_fields=['balance']
-#         )
-#         messages.success(self.request, f'{amount}€ loan payment was successfully made!')
-#         return super().form_valid(form)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

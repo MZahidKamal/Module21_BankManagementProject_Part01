@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'accounts',
     'core',
     'transactions',
+    'banking_status_app',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
