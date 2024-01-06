@@ -18,4 +18,6 @@ a single row instance of the BankingStatus model.
 
 For this instance creation, we didn't used any forms.py/views.py/urls.py or any template. Rather we've used some terminal
 commands.
+
+At can also be created from the admin panel.
 """
