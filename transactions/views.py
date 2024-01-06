@@ -20,7 +20,7 @@ from banking_status_app.models import BankingStatus_Model
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Create your views here.
 
-def send_transaction_confirmation_email(user, subject, amount, target_email, template_name='transactions/confirmation_email.html'):
+def send_transaction_confirmation_email(user, subject, amount, target_email, template_name):
     email_subject = subject
     message = render_to_string(template_name, {
         'user': user,
