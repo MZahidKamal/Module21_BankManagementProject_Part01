@@ -105,7 +105,7 @@ class DepositTransaction_View(TransactionCreationMixin_View):
         account.balance += amount
         account.save(update_fields=['balance'])
         messages.success(self.request, f'{amount}€ was successfully deposited!')
-        send_transaction_confirmation_email(user, 'Deposit Transaction Confirmation', amount, 'transactions/deposit_email.html')
+        send_transaction_confirmation_email(user, 'Deposit Transaction Confirmation', amount, user.email, 'transactions/deposit_email.html')
 
         return super().form_valid(form)
 
@@ -138,7 +138,7 @@ class WithdrawTransaction_View(TransactionCreationMixin_View):
         account.balance -= amount
         account.save(update_fields=['balance'])
         messages.success(self.request, f'{amount}€ was successfully withdrawn!')
-        send_transaction_confirmation_email(user, 'Withdraw Transaction Confirmation', amount, 'transactions/withdraw_email.html')
+        send_transaction_confirmation_email(user, 'Withdraw Transaction Confirmation', amount, user.email, 'transactions/withdraw_email.html')
         return super().form_valid(form)
 
     def form_invalid(self, form):
@@ -215,7 +215,7 @@ class LoanRequestTransaction_View(TransactionCreationMixin_View):
             return HttpResponse('You have reached the maximum number of loan requests!')
 
         messages.success(self.request, f'Loan request for {amount}€ was successfully submitted!')
-        send_transaction_confirmation_email(user, 'Loan Request Confirmation', amount, 'transactions/loan_request_email.html')
+        send_transaction_confirmation_email(user, 'Loan Request Confirmation', amount, user.email, 'transactions/loan_request_email.html')
         return super().form_valid(form)
 
     def form_invalid(self, form):
