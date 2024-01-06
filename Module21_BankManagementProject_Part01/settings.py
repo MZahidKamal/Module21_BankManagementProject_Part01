@@ -31,7 +31,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = ['https://mamar-bank-new.onrender.com','https://*.127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://mamar-bank-rjtv.onrender.com','https://*.127.0.0.1']
 
 
 # Application definition
@@ -113,7 +113,7 @@ WSGI_APPLICATION = 'Module21_BankManagementProject_Part01.wsgi.application'
 DATABASES = {                                                                                                           # Added database configuration for PostgreSQL during deployment on Render
     'default': dj_database_url.config(
         # Feel free to alter this value to suit your needs.
-        default='postgres://mamar_bank_uzgf_user:uFKjkLQwCSk9XhLqRsjWrAcwzFucUo6V@dpg-cm9eqs0cmk4c739eac9g-a.oregon-postgres.render.com/mamar_bank_uzgf',
+        default='postgres://mamar_bank_postgresql_user:vrb0OTEveVjeGw4yO0WJGgdHMXxJz4mz@dpg-cmcf28g21fec73cq21vg-a.oregon-postgres.render.com/mamar_bank_postgresql',
     )
 }
 
