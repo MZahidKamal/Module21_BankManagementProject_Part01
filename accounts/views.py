@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
@@ -8,6 +9,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .forms import UserRegistration_Form, UserProfileUpdate_Form
+from banking_status_app.models import BankingStatus_Model
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -18,10 +20,15 @@ class UserRegistrationForm_View(FormView):
     success_url = reverse_lazy('transaction_report')
 
     def form_valid(self, form):
-        print(form.cleaned_data)
-        new_user = form.save()
-        login(self.request, new_user)
-        return super().form_valid(form)         # form_valid function will be called if everything goes right.
+        status_check = BankingStatus_Model.objects.first()
+        if status_check.banking_service:
+            print(form.cleaned_data)
+            new_user = form.save()
+            login(self.request, new_user)
+            return super().form_valid(form)         # form_valid function will be called if everything goes right.
+        else:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            return super().form_invalid(form)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -82,8 +89,16 @@ class UserProfileUpdateForm_View(LoginRequiredMixin, View):
 
     def post(self, request):
         form = UserProfileUpdate_Form(request.POST, instance=request.user)
+
+        status_check = BankingStatus_Model.objects.first()
+        if not status_check.banking_service:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            context = {'form': form}
+            return render(request, self.template_name, context)
+
         if form.is_valid():
             form.save()
+            messages.success(self.request, 'Your profile information has been updated successfully!')
             return redirect('update_profile')
         context = {'form': form}
         return render(request, self.template_name, context)

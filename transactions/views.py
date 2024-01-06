@@ -14,17 +14,19 @@ from django.template.loader import render_to_string
 from .models import Transactions_Model
 from .forms import DepositTransaction_Form, WithdrawTransaction_Form, TransferTransaction_Form, LoanRequestTransaction_Form
 from .constants import DEPOSIT, WITHDRAW, TRANSFER, LOAN_REQUEST, LOAN_PAID
+from accounts.models import UserBankAccount_Model
+from banking_status_app.models import BankingStatus_Model
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Create your views here.
 
-def send_transaction_confirmation_email(user, subject, amount, template_name='transactions/confirmation_email.html'):
+def send_transaction_confirmation_email(user, subject, amount, target_email, template_name='transactions/confirmation_email.html'):
     email_subject = subject
     message = render_to_string(template_name, {
         'user': user,
         'amount': amount,
     })
-    to_email = user.email
+    to_email = target_email
     send_email = EmailMultiAlternatives(email_subject, '', to=[to_email])
     send_email.attach_alternative(message, 'text/html')
     send_email.send()
@@ -93,17 +95,19 @@ class DepositTransaction_View(TransactionCreationMixin_View):
         user = self.request.user
         amount = form.cleaned_data['amount']
         account = self.request.user.user_account
-        if form.is_valid():
-            account.balance += amount
-            account.save(
-                update_fields=['balance']
-            )
-            messages.success(self.request, f'{amount}€ was successfully deposited!')
-            send_transaction_confirmation_email(user, 'Deposit Transaction Confirmation', amount, 'transactions/deposit_email.html')
-            return super().form_valid(form)
-        else:
-            messages.error(self.request, 'Invalid amount!')
-            return redirect('deposit')
+
+        # Checking the banking status, if the services are active or declared bankrupt.
+        status_check = BankingStatus_Model.objects.first()
+        if not status_check.banking_service:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            return self.form_invalid(form)
+
+        account.balance += amount
+        account.save(update_fields=['balance'])
+        messages.success(self.request, f'{amount}€ was successfully deposited!')
+        send_transaction_confirmation_email(user, 'Deposit Transaction Confirmation', amount, 'transactions/deposit_email.html')
+
+        return super().form_valid(form)
 
     def form_invalid(self, form):
         print(form.errors)
@@ -124,17 +128,22 @@ class WithdrawTransaction_View(TransactionCreationMixin_View):
         user = self.request.user
         amount = form.cleaned_data['amount']
         account = self.request.user.user_account
-        if form.is_valid():
-            account.balance -= amount
-            account.save(
-                update_fields=['balance']
-            )
-            messages.success(self.request, f'{amount}€ was successfully withdrawn!')
-            send_transaction_confirmation_email(user, 'Withdraw Transaction Confirmation', amount, 'transactions/withdraw_email.html')
-            return super().form_valid(form)
-        else:
-            messages.error(self.request, 'Invalid amount!')
-            return redirect('deposit')
+
+        # Checking the banking status, if the services are active or declared bankrupt.
+        status_check = BankingStatus_Model.objects.first()
+        if not status_check.banking_service:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            return self.form_invalid(form)
+
+        account.balance -= amount
+        account.save(update_fields=['balance'])
+        messages.success(self.request, f'{amount}€ was successfully withdrawn!')
+        send_transaction_confirmation_email(user, 'Withdraw Transaction Confirmation', amount, 'transactions/withdraw_email.html')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        print(form.errors)
+        return super().form_invalid(form)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -151,11 +160,14 @@ class TransferTransaction_View(TransferCreationMixin_View):
         user = self.request.user
         user_account = self.request.user.user_account
 
+        # Checking the banking status, if the services are active or declared bankrupt.
+        status_check = BankingStatus_Model.objects.first()
+        if not status_check.banking_service:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            return self.form_invalid(form)
+
         # Get the receiver_account directly from cleaned_data
         receiver_account = form.cleaned_data.get('receiver_account')
-        if receiver_account is not None:
-            receiver_account_number = receiver_account.account_number
-
         amount = form.cleaned_data['amount']
 
         user_account.balance -= amount
@@ -164,15 +176,16 @@ class TransferTransaction_View(TransferCreationMixin_View):
         receiver_account.balance += amount
         receiver_account.save(update_fields=['balance'])
 
-        messages.success(self.request, f'{amount}€ was successfully transferred to the account number {receiver_account_number}!')
-        send_transaction_confirmation_email(user, 'Transfer Transaction Confirmation', amount, 'transactions/transfer_email.html')
+        messages.success(self.request, f'{amount}€ was successfully transferred to the account number {receiver_account.account_number}!')
+
+        send_transaction_confirmation_email(user, 'Transfer Transaction Confirmation', amount, user.email, 'transactions/transfer_sender_email.html')
+        send_transaction_confirmation_email(receiver_account, 'Transfer Transaction Confirmation', amount, receiver_account.user.email, 'transactions/transfer_receiver_email.html')
+
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        print("Form is invalid!")
         print(form.errors)
         return super().form_invalid(form)
-
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -190,14 +203,24 @@ class LoanRequestTransaction_View(TransactionCreationMixin_View):
         amount = form.cleaned_data['amount']
         account = self.request.user.user_account
 
-        current_loan_count = Transactions_Model.objects.filter(account=account, type=LOAN_REQUEST, loan_approved=True).count()
+        # Checking the banking status, if the services are active or declared bankrupt.
+        status_check = BankingStatus_Model.objects.first()
+        if not status_check.banking_service:
+            messages.error(self.request, 'This bank has declared bankruptcy. All services of this bank are discontinued.')
+            return self.form_invalid(form)
 
+        # Loan eligibility check.
+        current_loan_count = Transactions_Model.objects.filter(account=account, type=LOAN_REQUEST, loan_approved=True).count()
         if current_loan_count >= 3:
             return HttpResponse('You have reached the maximum number of loan requests!')
 
         messages.success(self.request, f'Loan request for {amount}€ was successfully submitted!')
         send_transaction_confirmation_email(user, 'Loan Request Confirmation', amount, 'transactions/loan_request_email.html')
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        print(form.errors)
+        return super().form_invalid(form)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
